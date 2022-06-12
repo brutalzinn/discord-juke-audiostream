@@ -46,11 +46,9 @@ namespace TEASConsole
                 .WriteTo.Console()
                 .CreateLogger();
 
-            var host = CreateHostBuilder(args).Build();
-            var serviceScope = host.Services.CreateScope();
-            var provider = serviceScope.ServiceProvider;
-            provider.GetRequiredService<IYoutubeService>().Play();
-          
+       
+         
+
 
             Version appVersion = System.Reflection.Assembly.GetEntryAssembly().GetName().Version;
             Log.Information("Welcome to TEASConsole, version {0}", appVersion.ToString());
@@ -116,18 +114,14 @@ namespace TEASConsole
    
 
             var logFactory = new LoggerFactory().AddSerilog();
-            Bot bot = new(BotToken, provider, logFactory, AdminUserName, AudioDevice, Verbose);
+            Bot bot = new(BotToken, logFactory, AdminUserName, AudioDevice, Verbose);
             bot.Connect().GetAwaiter().GetResult();
        
         
         }
-        //TENTANDO CRIAR UM DI AQUI. SILÊNCIO PRA GAMBIARRA
-        private static IHostBuilder CreateHostBuilder(string[] args)
-        {
-            return Host.CreateDefaultBuilder(args)
-           .ConfigureServices((_, services) =>
-                 services.AddTransient<IYoutubeService, YoutubeService>());
-        }
+   
+     
+
         /// <summary>
         /// Prompts the user to select an audio playback device in the command console.
         /// </summary>
