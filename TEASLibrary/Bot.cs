@@ -6,6 +6,10 @@ using DSharpPlus.Entities;
 using DSharpPlus.VoiceNext;
 using NAudio.CoreAudioApi;
 using NAudio.Wave;
+using Base;
+using OpenQA.Selenium;
+using Base.Models;
+using Base.Services;
 
 namespace TEASLibrary
 {
@@ -32,11 +36,13 @@ namespace TEASLibrary
         /// <summary>
         /// The Discord username of an eligible user that is allowed to control the bot.
         /// </summary>
+        /// 
         private string AdminUserName { get; set; }
 
         private EventHandler<WaveInEventArgs>? AudioHandler;
         private EventHandler<StoppedEventArgs>? StoppedHandler;
 
+        private static IServiceProvider serviceProvider { get; set; }
         /// <summary>
         /// Constructs a new Bot object with the given parameters.
         /// </summary>
@@ -45,9 +51,10 @@ namespace TEASLibrary
         /// <param name="adminUserName">An optional Discord name of a user that the bot should accept commands from in addition to server managers.</param>
         /// <param name="audioDevice">An optionally pre-defined audio device to be used for streaming.</param>
         /// <param name="verbose">Define whether debug log messages should be displayed. Defaults to false.</param>
-        public Bot(string botToken, ILoggerFactory? logFactory = null, string adminUserName = "", MMDevice? audioDevice = null, bool verbose = false)
+        public Bot(string botToken, IServiceProvider _serviceProvider, ILoggerFactory? logFactory = null, string adminUserName = "", MMDevice? audioDevice = null, bool verbose = false)
         {
             ChangeAudioDevice(audioDevice);
+            serviceProvider = _serviceProvider;
             AdminUserName = adminUserName;
 
             // Create Discord configuration
@@ -56,7 +63,7 @@ namespace TEASLibrary
                 Token = botToken,
                 TokenType = TokenType.Bot
             };
-
+        
             // Set log factory if parameter is not null
             if (logFactory != null)
                 botConfig.LoggerFactory = logFactory;
@@ -67,10 +74,13 @@ namespace TEASLibrary
 
             // Create client object.
             Discord = new DiscordClient(botConfig);
+     
+
 
             // Register Slash Commands
             var slashCmds = Discord.UseSlashCommands(new SlashCommandsConfiguration
             {
+                
                 Services = new ServiceCollection().AddSingleton<Bot>(this).BuildServiceProvider()
             });
             slashCmds.RegisterCommands<SlashCommands>();
@@ -78,7 +88,7 @@ namespace TEASLibrary
             // Register event handlers for logging command activity
             slashCmds.SlashCommandInvoked += async (s, e) =>
             {
-                Discord.Logger.LogInformation("{CommandName} issued by {User}#{Discriminator}", e.Context.CommandName, e.Context.Member.Username, e.Context.Member.Discriminator);
+                Discord.Logger.LogInformation("{CommandName} issued by {User}#{Discriminator}", e.Context.CommandName, e.Context.Member?.Username, e.Context.Member?.Discriminator);
             };
             slashCmds.SlashCommandExecuted += async (s, e) =>
             {
@@ -141,11 +151,23 @@ namespace TEASLibrary
 
         private class SlashCommands : ApplicationCommandModule
         {
-
             /// <summary>
             /// Bot object passed on to the commands.
             /// </summary>
             public Bot BotInstance { private get; set; }
+
+            public IYoutubeService youtubeService { get; set; }
+
+
+            public SlashCommands()
+            {
+                youtubeService = serviceProvider.GetRequiredService<IYoutubeService>();
+            }
+
+
+       
+
+
 
             [SlashCommand("join", "Join the current voice channel.")]
             public async Task Join(InteractionContext ctx)
@@ -322,6 +344,76 @@ namespace TEASLibrary
                     (Utils.GenerateEmbed(DiscordColor.Green, "Stopped streaming.")));
             }
 
+            [SlashCommand("play", "Play youtube url")]
+            public async Task Play(InteractionContext ctx, [Option("play", "nome do vídeo")] string url)
+            {
+                // Perform feasibility checks
+                if (!CheckPermissions(ctx, BotInstance.AdminUserName))
+                    return;
+                if (Utils.CheckConnectionStatus(ctx) == false)
+                {
+                    await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
+                        (Utils.GenerateEmbed(DiscordColor.Red, "Bot is not connected to a voice channel.")));
+                    return;
+                }
+                if (BotInstance.AudioDevice == null || BotInstance.Capture == null)
+                {
+                    await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
+                        (Utils.GenerateEmbed(DiscordColor.Red, "No audio device is selected.")));
+                    return;
+                }
+                if (BotInstance.Capture.CaptureState != CaptureState.Capturing)
+                {
+                    await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
+                        (Utils.GenerateEmbed(DiscordColor.Red, "Bot is not streaming.")));
+                    return;
+                }
+                
+                await youtubeService.PlayUrl(url);
+
+                var songTitle = await youtubeService.CurrentSong();
+
+                await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
+                  (Utils.GenerateEmbed(DiscordColor.Green, string.Format("Tocandoooo agora.. \n" +
+                  "{0} \n" +
+                  "por {1} \n", songTitle.Title, songTitle.Author)
+                  )));
+
+
+            }
+
+            [SlashCommand("Add", "Adicionar na queue")]
+            public async Task AddQueue(InteractionContext ctx, [Option("play", "nome do vídeo")] string videoTitle)
+            {
+                // Perform feasibility checks
+                if (!CheckPermissions(ctx, BotInstance.AdminUserName))
+                    return;
+                if (Utils.CheckConnectionStatus(ctx) == false)
+                {
+                    await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
+                        (Utils.GenerateEmbed(DiscordColor.Red, "Bot is not connected to a voice channel.")));
+                    return;
+                }
+                if (BotInstance.AudioDevice == null || BotInstance.Capture == null)
+                {
+                    await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
+                        (Utils.GenerateEmbed(DiscordColor.Red, "No audio device is selected.")));
+                    return;
+                }
+                if (BotInstance.Capture.CaptureState != CaptureState.Capturing)
+                {
+                    await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
+                        (Utils.GenerateEmbed(DiscordColor.Red, "Bot is not streaming.")));
+                    return;
+                }
+
+                await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
+              (Utils.GenerateEmbed(DiscordColor.Green, "Disconnected.")));
+
+            }
+
+
+
             [SlashCommand("leave", "Stop streaming and disconnect from the current voice channel.")]
             public async Task Leave(InteractionContext ctx)
             {
@@ -365,7 +457,7 @@ namespace TEASLibrary
             /// <returns>True if the user can execute the command, false if not.</returns>
             private static bool CheckPermissions(InteractionContext ctx, string adminUsername)
             {
-                if (ctx.Member.PermissionsIn(ctx.Channel).HasFlag(DSharpPlus.Permissions.ManageGuild) || ctx.Member.Username + "#" + ctx.Member.Discriminator == adminUsername)
+                if (ctx.Member.PermissionsIn(ctx.Channel).HasFlag(DSharpPlus.Permissions.ManageGuild) || ctx?.Member.Username + "#" + ctx?.Member.Discriminator == adminUsername)
                     return true;
                 else
                 {

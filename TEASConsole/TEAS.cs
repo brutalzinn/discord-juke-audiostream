@@ -7,6 +7,11 @@ using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Core;
 using TEASLibrary;
+using Base.Services;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Base;
 
 namespace TEASConsole
 {
@@ -32,6 +37,8 @@ namespace TEASConsole
 
         static void Main(string[] args)
         {
+
+             
             // Initialise Serilog
             var logLevelSwitch = new LoggingLevelSwitch();
             Log.Logger = new LoggerConfiguration()
@@ -39,17 +46,23 @@ namespace TEASConsole
                 .WriteTo.Console()
                 .CreateLogger();
 
+            var host = CreateHostBuilder(args).Build();
+            var serviceScope = host.Services.CreateScope();
+            var provider = serviceScope.ServiceProvider;
+            provider.GetRequiredService<IYoutubeService>().Play();
+          
+
             Version appVersion = System.Reflection.Assembly.GetEntryAssembly().GetName().Version;
             Log.Information("Welcome to TEASConsole, version {0}", appVersion.ToString());
 
             // Check for updates
-            if (Utils.CheckUpdate(appVersion) == 1)
-                Log.Warning("A newer version of this application is available. Please download it from the Releases section on GitHub: https://github.com/TheEpicSnowWolf/TheEpicAudioStreamer/releases/");
+            //if (Utils.CheckUpdate(appVersion) == 1)
+            //    Log.Warning("A newer version of this application is available. Please download it from the Releases section on GitHub: https://github.com/TheEpicSnowWolf/TheEpicAudioStreamer/releases/");
 
             // Parse command line options
             string BotToken = "";
             string AudioDeviceName = "";
-            string AdminUserName = "";
+            string AdminUserName = "robertocpaes.dev#2825";
             bool Verbose = false;
             CommandLine.Parser.Default.ParseArguments<Options>(args).WithParsed<Options>(o =>
             {
@@ -99,12 +112,22 @@ namespace TEASConsole
             if (AdminUserName != "")
                 Log.Information("The bot will accept commands from user {0}", AdminUserName);
 
-            // When all options and configurations are parsed, create a new bot object and run it.
-            var logFactory = new LoggerFactory().AddSerilog();
-            Bot bot = new(BotToken, logFactory, AdminUserName, AudioDevice, Verbose);
-            bot.Connect().GetAwaiter().GetResult();
-        }
+            //call DI
+   
 
+            var logFactory = new LoggerFactory().AddSerilog();
+            Bot bot = new(BotToken, provider, logFactory, AdminUserName, AudioDevice, Verbose);
+            bot.Connect().GetAwaiter().GetResult();
+       
+        
+        }
+        //TENTANDO CRIAR UM DI AQUI. SILÊNCIO PRA GAMBIARRA
+        private static IHostBuilder CreateHostBuilder(string[] args)
+        {
+            return Host.CreateDefaultBuilder(args)
+           .ConfigureServices((_, services) =>
+                 services.AddTransient<IYoutubeService, YoutubeService>());
+        }
         /// <summary>
         /// Prompts the user to select an audio playback device in the command console.
         /// </summary>
