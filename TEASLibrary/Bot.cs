@@ -170,14 +170,14 @@ namespace TEASLibrary
                 if (connection != null)
                 {
                     await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-                        (Utils.GenerateEmbed(DiscordColor.Red, "Bot is already connected to a voice channel.")));
+                        (Utils.GenerateEmbed(DiscordColor.Red, Message.MessageEnum.BotNotConnected.GetDescription())));
                     return;
                 }
                 var voicestate = ctx.Member?.VoiceState;
                 if (voicestate?.Channel == null)
                 {
                     await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-                        (Utils.GenerateEmbed(DiscordColor.Red, "You are not in a voice channel.")));
+                        (Utils.GenerateEmbed(DiscordColor.Red, Message.MessageEnum.UserNotInVoiceChannel.GetDescription())));
                     return;
                 }
 
@@ -200,10 +200,10 @@ namespace TEASLibrary
 
                 if (channel.Parent != null)
                     await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-                        (Utils.GenerateEmbed(DiscordColor.Green, $"Bot connected to **{channel.Name}** in '{channel.Parent.Name}'.")));
+                        (Utils.GenerateEmbed(DiscordColor.Green, Message.MessageEnum.BotConnectedToIn.GetDescription(channel.Name, channel.Parent.Name))));
                 else
                     await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-                        (Utils.GenerateEmbed(DiscordColor.Green, $"Bot connected to **{channel.Name}**.")));
+                        (Utils.GenerateEmbed(DiscordColor.Green, Message.MessageEnum.BotConnectedTo.GetDescription(channel.Name))));
             }
 
             [SlashCommand("start", "Start streaming. Bot needs to be connected to a voice channel.")]
@@ -217,13 +217,13 @@ namespace TEASLibrary
                 if (connection == null)
                 {
                     await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-                        (Utils.GenerateEmbed(DiscordColor.Red, "Bot is not connected to a voice channel.")));
+                        (Utils.GenerateEmbed(DiscordColor.Red, Message.MessageEnum.BotNotConnected.GetDescription())));
                     return;
                 }
                 if (BotInstance.Capture == null || BotInstance.AudioDevice == null)
                 {
                     await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-                        (Utils.GenerateEmbed(DiscordColor.Red, "No audio device is selected.")));
+                        (Utils.GenerateEmbed(DiscordColor.Red, Message.MessageEnum.NoAudioDevices.GetDescription())));
                     return;
                 }
 
@@ -232,12 +232,12 @@ namespace TEASLibrary
                 {
                     BotInstance.Capture.StartRecording();
                     await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-                            (Utils.GenerateEmbed(DiscordColor.Green, $"Capturing and streaming from device **{BotInstance.AudioDevice.FriendlyName}**.")));
+                            (Utils.GenerateEmbed(DiscordColor.Green, Message.MessageEnum.NoAudioDevices.GetDescription(BotInstance.AudioDevice.FriendlyName))));
                 }
                 else
                 {
                     await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-                        (Utils.GenerateEmbed(DiscordColor.Red, "Already capturing from device.")));
+                        (Utils.GenerateEmbed(DiscordColor.Red, Message.MessageEnum.AlreadyStreaming.GetDescription())));
                 }
             }
 
@@ -254,13 +254,13 @@ namespace TEASLibrary
                 if (voicestate?.Channel == null)
                 {
                     await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-                        (Utils.GenerateEmbed(DiscordColor.Red, "You are not in a voice channel.")));
+                        (Utils.GenerateEmbed(DiscordColor.Red, Message.MessageEnum.UserNotInVoiceChannel.GetDescription())));
                     return;
                 }
                 if (BotInstance.Capture == null || BotInstance.AudioDevice == null)
                 {
                     await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-                        (Utils.GenerateEmbed(DiscordColor.Red, "No audio device is selected.")));
+                        (Utils.GenerateEmbed(DiscordColor.Red, Message.MessageEnum.NoAudioDevices.GetDescription())));
                     return;
                 }
 
@@ -290,107 +290,77 @@ namespace TEASLibrary
                     BotInstance.Capture.StartRecording();
                     if (voicestate.Channel.Parent == null)
                         await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-                            (Utils.GenerateEmbed(DiscordColor.Green, $"Girando a gibimboca da parafuseta \n " +
-                            $"Conectado em **{voicestate.Channel.Name}** e compartilhando de **{BotInstance.AudioDevice.FriendlyName}**.")));
+                            (Utils.GenerateEmbed(DiscordColor.Green, Message.MessageEnum.ActionRestared.GetDescription() +
+                           Message.MessageEnum.BotConnectedToIn.GetDescription(voicestate.Channel.Name, BotInstance.AudioDevice.FriendlyName))));
                     else
                         await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-                           (Utils.GenerateEmbed(DiscordColor.Green, $"Conectado em **{voicestate.Channel.Name}** de **{voicestate.Channel.Parent.Name}** e compartilhando do dispositivo **{BotInstance.AudioDevice.FriendlyName}**.")));
+                           (Utils.GenerateEmbed(DiscordColor.Green, Message.MessageEnum.BotConnectedToIn.GetDescription(voicestate.Channel.Name, BotInstance.AudioDevice.FriendlyName)))
+                     );
                 }
                 else
                 {
                     await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-                        (Utils.GenerateEmbed(DiscordColor.Red, "Already capturing from device.")));
+                        (Utils.GenerateEmbed(DiscordColor.Red, Message.MessageEnum.AlreadyStreaming.GetDescription())));
                 }
             }
 
             [SlashCommand("stop", "Stop streaming.")]
             public async Task Stop(InteractionContext ctx)
             {
-                // Perform feasibility checks
                 if (!CheckPermissions(ctx, BotInstance.AdminUserName))
                     return;
                 if (Utils.CheckConnectionStatus(ctx) == false)
                 {
                     await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-                        (Utils.GenerateEmbed(DiscordColor.Red, "Bot is not connected to a voice channel.")));
+                        (Utils.GenerateEmbed(DiscordColor.Red, Message.MessageEnum.BotNotConnected.GetDescription())));
                     return;
                 }
                 if (BotInstance.AudioDevice == null || BotInstance.Capture == null)
                 {
                     await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-                        (Utils.GenerateEmbed(DiscordColor.Red, "No audio device is selected.")));
+                        (Utils.GenerateEmbed(DiscordColor.Red, Message.MessageEnum.NoAudioDevices.GetDescription())));
                     return;
                 }
                 if (BotInstance.Capture.CaptureState != CaptureState.Capturing)
                 {
                     await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-                        (Utils.GenerateEmbed(DiscordColor.Red, "Bot is not streaming.")));
+                        (Utils.GenerateEmbed(DiscordColor.Red, Message.MessageEnum.BotNotConnected.GetDescription())));
                     return;
                 }
 
                 // Stop capturing.
                 BotInstance.Capture.StopRecording();
                 await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-                    (Utils.GenerateEmbed(DiscordColor.Green, "Stopped streaming.")));
+                    (Utils.GenerateEmbed(DiscordColor.Green, Message.MessageEnum.StopStreaming.GetDescription())));
             }
 
             [SlashCommand("next", "Next audio")]
             public async Task Next(InteractionContext ctx)
             {
-                // Perform feasibility checks
                 if (!CheckPermissions(ctx, BotInstance.AdminUserName))
                     return;
                 if (Utils.CheckConnectionStatus(ctx) == false)
                 {
                     await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-                        (Utils.GenerateEmbed(DiscordColor.Red, "Bot is not connected to a voice channel.")));
+                        (Utils.GenerateEmbed(DiscordColor.Red, Message.MessageEnum.BotNotConnected.GetDescription())));
                     return;
                 }
                 if (BotInstance.AudioDevice == null || BotInstance.Capture == null)
                 {
                     await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-                        (Utils.GenerateEmbed(DiscordColor.Red, "No audio device is selected.")));
+                        (Utils.GenerateEmbed(DiscordColor.Red, Message.MessageEnum.NoAudioDevices.GetDescription())));
                     return;
                 }
                 if (BotInstance.Capture.CaptureState != CaptureState.Capturing)
                 {
                     await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-                        (Utils.GenerateEmbed(DiscordColor.Red, "Bot is not streaming.")));
+                        (Utils.GenerateEmbed(DiscordColor.Red, Message.MessageEnum.BotStoppedStreaming.GetDescription())));
                     return;
                 }
 
                 await YoutubeService.Next();
 
-                var message = Utils.GenerateEmbed(DiscordColor.Green, "** Pulando música chata.. **");
-
-                await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed(message));
-
-                return;
-
-            }
-            //vamos criar um sistema de permissão melhor depois.
-            [SlashCommand("tocando", "Mostrar som tocando atualmente")]
-            public async Task CurrentSong(InteractionContext ctx)
-            {
-             
-                if (BotInstance.AudioDevice == null || BotInstance.Capture == null)
-                {
-                    await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-                        (Utils.GenerateEmbed(DiscordColor.Red, "No audio device is selected.")));
-                    return;
-                }
-                if (BotInstance.Capture.CaptureState != CaptureState.Capturing)
-                {
-                    await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-                        (Utils.GenerateEmbed(DiscordColor.Red, "Bot is not streaming.")));
-                    return;
-                }
-
-                var songInfo = await YoutubeService.CurrentSong();
-
-                var message = Utils.GenerateEmbed(DiscordColor.Green, string.Format("** Tocando agora **.. \n {0} \n" +
-                    "Por {1} \n" +
-                    "Url {2}", songInfo.Title, songInfo.Author, songInfo.Url));
+                var message = Utils.GenerateEmbed(DiscordColor.Green, Message.MessageEnum.SkipMusic.GetDescription());
 
                 await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed(message));
 
@@ -401,10 +371,66 @@ namespace TEASLibrary
             [SlashCommand("back", "Back audio")]
             public async Task Prev(InteractionContext ctx)
             {
-            
+                if (!CheckPermissions(ctx, BotInstance.AdminUserName))
+                    return;
+
+                if (Utils.CheckConnectionStatus(ctx) == false)
+                {
+                    await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
+                        (Utils.GenerateEmbed(DiscordColor.Red, Message.MessageEnum.BotNotConnected.GetDescription())));
+                    return;
+                }
+                if (BotInstance.AudioDevice == null || BotInstance.Capture == null)
+                {
+                    await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
+                        (Utils.GenerateEmbed(DiscordColor.Red, Message.MessageEnum.NoAudioDevices.GetDescription())));
+                    return;
+                }
+                if (BotInstance.Capture.CaptureState != CaptureState.Capturing)
+                {
+                    await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
+                        (Utils.GenerateEmbed(DiscordColor.Red, Message.MessageEnum.BotStoppedStreaming.GetDescription())));
+                    return;
+                }
                 await YoutubeService.Prev();
 
-                var message = Utils.GenerateEmbed(DiscordColor.Green, "** Voltando.. Aquela música não era tão chata assim :v **");
+                var message = Utils.GenerateEmbed(DiscordColor.Green, Message.MessageEnum.PrevMusic.GetDescription());
+
+                await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed(message));
+
+                return;
+
+            }
+            //vamos criar um sistema de permissão melhor depois.
+            [SlashCommand("tocando", "Mostrar som tocando atualmente")]
+            public async Task CurrentSong(InteractionContext ctx)
+            {
+                if (!CheckPermissions(ctx, BotInstance.AdminUserName))
+                    return;
+
+                if (Utils.CheckConnectionStatus(ctx) == false)
+                {
+                    await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
+                        (Utils.GenerateEmbed(DiscordColor.Red, Message.MessageEnum.BotNotConnected.GetDescription())));
+                    return;
+                }
+                if (BotInstance.AudioDevice == null || BotInstance.Capture == null)
+                {
+                    await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
+                        (Utils.GenerateEmbed(DiscordColor.Red, Message.MessageEnum.NoAudioDevices.GetDescription())));
+                    return;
+                }
+                if (BotInstance.Capture.CaptureState != CaptureState.Capturing)
+                {
+                    await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
+                        (Utils.GenerateEmbed(DiscordColor.Red, Message.MessageEnum.BotStoppedStreaming.GetDescription())));
+                    return;
+                }
+
+                var songInfo = await YoutubeService.CurrentSong();
+
+                var message = Utils.GenerateEmbed(DiscordColor.Green,
+                     Message.MessageEnum.SongInfo.GetDescription(songInfo.Title, songInfo.Author, songInfo.Album, songInfo.Url));
 
                 await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed(message));
 
@@ -415,50 +441,18 @@ namespace TEASLibrary
             [SlashCommand("play", "Toque uma música informando uma url")]
             public async Task Play(InteractionContext ctx, [Option("play", "nome do vídeo")] string url)
             {
-                // Perform feasibility checks
-             
-                
+                if (!CheckPermissions(ctx, BotInstance.AdminUserName))
+                    return;
+
                 await YoutubeService.PlayUrl(url);
 
-                var message = Utils.GenerateEmbed(DiscordColor.Green, string.Format("Reproduzindo.. {0}", url));
+                var message = Utils.GenerateEmbed(DiscordColor.Green, Message.MessageEnum.Play.GetDescription(url));
 
                 await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed(message));
 
                 return;
 
             }
-
-            //[SlashCommand("Add", "Adicionar na queue")]
-            //public async Task AddQueue(InteractionContext ctx, [Option("play", "nome do vídeo")] string videoTitle)
-            //{
-            //    // Perform feasibility checks
-            //    if (!CheckPermissions(ctx, BotInstance.AdminUserName))
-            //        return;
-            //    if (Utils.CheckConnectionStatus(ctx) == false)
-            //    {
-            //        await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-            //            (Utils.GenerateEmbed(DiscordColor.Red, "Bot is not connected to a voice channel.")));
-            //        return;
-            //    }
-            //    if (BotInstance.AudioDevice == null || BotInstance.Capture == null)
-            //    {
-            //        await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-            //            (Utils.GenerateEmbed(DiscordColor.Red, "No audio device is selected.")));
-            //        return;
-            //    }
-            //    if (BotInstance.Capture.CaptureState != CaptureState.Capturing)
-            //    {
-            //        await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-            //            (Utils.GenerateEmbed(DiscordColor.Red, "Bot is not streaming.")));
-            //        return;
-            //    }
-
-            //    await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-            //  (Utils.GenerateEmbed(DiscordColor.Green, "Disconnected.")));
-
-            //}
-
-
 
             [SlashCommand("leave", "Pare o compartilhamento de áudio no canal")]
             public async Task Leave(InteractionContext ctx)

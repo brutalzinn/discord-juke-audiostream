@@ -46,10 +46,6 @@ namespace TEASConsole
                 .WriteTo.Console()
                 .CreateLogger();
 
-       
-         
-
-
             Version appVersion = System.Reflection.Assembly.GetEntryAssembly().GetName().Version;
             Log.Information("Welcome to TEASConsole, version {0}", appVersion.ToString());
 
